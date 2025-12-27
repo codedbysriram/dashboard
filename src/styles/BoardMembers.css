@@ -1,0 +1,300 @@
+/* ===============================
+   GLOBAL DARK BLUE BACKGROUND
+================================ */
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, #020617 0%, #020617 100%),
+    radial-gradient(circle at 15% 10%, #1e3a8a55, transparent 40%),
+    radial-gradient(circle at 85% 90%, #0f172a99, transparent 40%);
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+/* ===============================
+   PAGE CONTAINER
+================================ */
+.board-container {
+  padding: 32px 20px;
+  color: #e5e7eb;
+}
+
+.board-container h2 {
+  text-align: center;
+  font-size: 26px;
+  margin-bottom: 30px;
+  letter-spacing: 0.5px;
+}
+
+/* ===============================
+   GRID CONTAINER (CONTROLLED WIDTH)
+================================ */
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 22px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* ===============================
+   BOARD CARD (UNIQUE STYLE)
+================================ */
+.board-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(30, 41, 59, 0.9),
+      rgba(15, 23, 42, 0.9)
+    );
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.25s ease, border 0.25s ease;
+}
+
+.board-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: linear-gradient(
+    120deg,
+    transparent 30%,
+    rgba(56, 189, 248, 0.15),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.board-card:hover::before {
+  opacity: 1;
+}
+
+.board-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+/* ===============================
+   PROFILE IMAGE
+================================ */
+.board-card img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #38bdf8;
+  background: #020617;
+}
+
+/* ===============================
+   TEXT CONTENT
+================================ */
+.board-card h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.board-card p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* ===============================
+   ROLE BADGE (UNIQUE)
+================================ */
+.board-card .role {
+  margin-left: auto;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  color: white;
+  white-space: nowrap;
+}
+
+/* ===============================
+   RESULT STATUS (TABLE USAGE)
+================================ */
+.pass {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.fail {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* ===============================
+   RESPONSIVE
+================================ */
+@media (max-width: 768px) {
+  .board-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .board-card .role {
+    margin-left: 0;
+    margin-top: 6px;
+  }
+}
+/* ===============================
+   POPUP OVERLAY (SOFTER & CLEAN)
+================================ */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.85); /* deeper, calmer */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* ===============================
+   POPUP CARD (PREMIUM, CALM)
+================================ */
+.popup-card {
+  background: #0b1224; /* solid dark blue (less gradient) */
+  max-width: 900px;
+  width: 94%;
+  border-radius: 18px;
+  padding: 28px;
+  border: 1px solid #1e293b;
+  position: relative;
+}
+
+/* ===============================
+   CLOSE BUTTON (SUBTLE)
+================================ */
+.close-btn {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: #ef4444;
+}
+
+/* ===============================
+   POPUP HEADER (CLEAN SEPARATION)
+================================ */
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #1e293b;
+}
+
+/* ===============================
+   PROFILE SECTION (POPUP)
+================================ */
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-pic {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 2px solid #38bdf8;
+}
+
+.profile-info h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.profile-info p {
+  margin: 2px 0;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.role-text {
+  font-size: 13px;
+  color: #38bdf8;
+}
+
+/* ===============================
+   ACADEMIC SUMMARY (NEAT BOXES)
+================================ */
+.academic-summary {
+  display: flex;
+  gap: 14px;
+}
+
+.summary-box {
+  min-width: 100px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #020617;
+  border: 1px solid #1e293b;
+  text-align: center;
+}
+
+.summary-box span {
+  display: block;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.summary-box strong {
+  font-size: 22px;
+  font-weight: 600;
+  color: #38bdf8;
+}
+
+/* ===============================
+   POPUP TABLE (READABLE)
+================================ */
+.popup-card table {
+  margin-top: 14px;
+}
+
+.popup-card thead th {
+  background: #020617;
+  color: #9ca3af;
+}
+
+.popup-card tbody td {
+  color: #e5e7eb;
+}
+
+/* ===============================
+   RESPONSIVE (POPUP ONLY)
+================================ */
+@media (max-width: 768px) {
+  .popup-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .academic-summary {
+    width: 100%;
+  }
+}
