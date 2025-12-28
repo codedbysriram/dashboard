@@ -9,15 +9,20 @@
 /* ================= PAGE BACKGROUND ================= */
 body {
   min-height: 100vh;
+  margin: 0;
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.25), transparent 45%),
     radial-gradient(circle at bottom right, rgba(22, 163, 74, 0.18), transparent 45%),
     linear-gradient(135deg, #020617, #020617);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #e5e7eb;
 }
 
 /* ================= LOGIN PAGE WRAPPER ================= */
 .login-page {
+  width: 100%;
   min-height: 100vh;
   position: relative;
 
@@ -28,34 +33,35 @@ body {
 
 /* ================= BACK BUTTON ================= */
 .back-btn {
+    margin-left: -450px;
   position: absolute;
   top: 20px;
-  right: 20px;
+  left: 20px;
 
-  padding: 8px 16px;
-  font-size: 0.9rem;
+  padding: 6px 14px;
+  font-size: 0.85rem;
   font-weight: 600;
 
-  background: linear-gradient(135deg, #2563eb, #1e40af);
+  background: linear-gradient(135deg, #1e3a8a, #020617);
   color: #ffffff;
 
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
 
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.45);
+  box-shadow: 0 6px 16px rgba(30, 58, 138, 0.45);
   transition: all 0.25s ease;
 }
 
 .back-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(59, 130, 246, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.6);
 }
 
 /* ================= LOGIN BOX ================= */
 .login-box {
   width: 100%;
-  max-width: 380px;
+  max-width: 420px;
   padding: 36px 32px;
 
   background: rgba(15, 23, 42, 0.95);
@@ -66,23 +72,24 @@ body {
 
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  z-index: 1;
 }
 
 /* ================= TITLE ================= */
 .login-box h2 {
   text-align: center;
+  margin-bottom: 28px;
   font-size: 1.7rem;
   font-weight: 700;
   color: #e0e7ff;
-  margin-bottom: 10px;
+  letter-spacing: 0.4px;
 }
 
 /* ================= FORM ================= */
 .login-box form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 /* ================= INPUTS ================= */
@@ -108,18 +115,18 @@ body {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
 }
 
-/* ================= LOGIN BUTTON ================= */
+/* ================= BUTTON ================= */
 .login-box button {
   margin-top: 10px;
   padding: 12px;
+  font-size: 1rem;
+  font-weight: 600;
 
   background: linear-gradient(135deg, #1e3a8a, #020617);
   color: #ffffff;
 
   border: none;
   border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 600;
   cursor: pointer;
 
   box-shadow: 0 10px 26px rgba(30, 58, 138, 0.55);
@@ -134,13 +141,11 @@ body {
 /* ================= RESPONSIVE ================= */
 @media (max-width: 480px) {
   .login-box {
-    margin: 0 16px;
-    padding: 28px 22px;
+    margin: 0 14px;
+    padding: 30px 24px;
   }
 
-  .back-btn {
-    top: 12px;
-    right: 12px;
-    font-size: 0.85rem;
+  .login-box h2 {
+    font-size: 1.5rem;
   }
 }
