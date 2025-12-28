@@ -190,3 +190,13 @@
     height: 34px;
   }
 }
+.back-btn {
+  margin-bottom: 16px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}

@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles/StudentsManager.css";
 
 export default function StudentsManager() {
+  const navigate = useNavigate();
+
 
   /* ================= STATE ================= */
   const [students, setStudents] = useState([]);
@@ -212,7 +215,10 @@ export default function StudentsManager() {
   return (
     <div className="card">
       <h3>Student & Subject Management</h3>
-
+      <button className="back-btn" onClick={() => navigate("/admin/dashboard")}>
+        ← Back to Dashboard
+      </button>
+      
       {/* ===== ADD STUDENT ===== */}
       <h4>Add Student</h4>
       <input placeholder="Reg No" value={studentForm.regno}
