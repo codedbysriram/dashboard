@@ -6,10 +6,16 @@
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* ================= THEME VARIABLES ================= */
+:root {
+  --btn-bg: linear-gradient(135deg, #1e3a8a, #020617);
+  --btn-shadow: 0 10px 26px rgba(30, 58, 138, 0.55);
+  --btn-hover-shadow: 0 18px 40px rgba(37, 99, 235, 0.65);
+}
+
 /* ================= PAGE BACKGROUND ================= */
 body {
   min-height: 100vh;
-  margin: 0;
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.25), transparent 45%),
     radial-gradient(circle at bottom right, rgba(22, 163, 74, 0.18), transparent 45%),
@@ -25,7 +31,6 @@ body {
   width: 100%;
   min-height: 100vh;
   position: relative;
-
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,7 +38,6 @@ body {
 
 /* ================= BACK BUTTON ================= */
 .back-btn {
-  margin-left: -450px;
   position: absolute;
   top: 20px;
   left: 20px;
@@ -42,21 +46,20 @@ body {
   font-size: 0.85rem;
   font-weight: 600;
 
-  background: linear-gradient(135deg, #1e3a8a, #020617);
+  background: var(--btn-bg);
   color: #ffffff;
-
 
   border: none;
   border-radius: 8px;
   cursor: pointer;
 
-  box-shadow: 0 6px 16px rgba(30, 58, 138, 0.45);
+  box-shadow: var(--btn-shadow);
   transition: all 0.25s ease;
 }
 
 .back-btn:hover {
-   transform: translateY(-2px);
-  box-shadow: 0 18px 40px rgba(37, 99, 235, 0.65);
+  transform: translateY(-2px);
+  box-shadow: var(--btn-hover-shadow);
 }
 
 /* ================= LOGIN BOX ================= */
@@ -70,10 +73,8 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.2);
 
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65);
-
   display: flex;
   flex-direction: column;
-  z-index: 1;
 }
 
 /* ================= TITLE ================= */
@@ -116,27 +117,34 @@ body {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
 }
 
-/* ================= BUTTON ================= */
+/* ================= ALL BUTTONS (SAME STYLE) ================= */
 .login-box button {
   margin-top: 10px;
   padding: 12px;
   font-size: 1rem;
   font-weight: 600;
 
-  background: linear-gradient(135deg, #1e3a8a, #020617);
+  background: var(--btn-bg);
   color: #ffffff;
 
   border: none;
   border-radius: 12px;
   cursor: pointer;
 
-  box-shadow: 0 10px 26px rgba(30, 58, 138, 0.55);
+  box-shadow: var(--btn-shadow);
   transition: all 0.3s ease;
 }
 
 .login-box button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 18px 40px rgba(37, 99, 235, 0.65);
+  box-shadow: var(--btn-hover-shadow);
+}
+
+/* ================= DISABLED BUTTON ================= */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* ================= RESPONSIVE ================= */
