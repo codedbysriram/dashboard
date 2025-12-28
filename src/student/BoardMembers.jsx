@@ -85,6 +85,9 @@ export default function BoardMembers() {
 
   return (
     <div className="board-container">
+      <button className="back-bn" onClick={() => navigate("/")}>
+        ← Back to Dashboard
+      </button>
       <h2>Student Board Members</h2>
 
       <div className="board-grid">

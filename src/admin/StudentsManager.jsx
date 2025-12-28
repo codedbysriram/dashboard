@@ -214,10 +214,10 @@ export default function StudentsManager() {
   /* ================= UI ================= */
   return (
     <div className="card">
-      <h3>Student & Subject Management</h3>
-      <button className="back-btn" onClick={() => navigate("/admin/dashboard")}>
+      <button className="back-bn" onClick={() => navigate("/admin/dashboard")}>
         ← Back to Dashboard
       </button>
+      <h3>Student & Subject Management</h3>
       
       {/* ===== ADD STUDENT ===== */}
       <h4>Add Student</h4>

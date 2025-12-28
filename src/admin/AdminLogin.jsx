@@ -20,13 +20,8 @@ export default function AdminLogin() {
   };
 
   return (
+
     <div className="login-page">
-
-      {/* BACK TO HOME */}
-      <button className="back-btn" onClick={() => nav("/")}>
-        ← Back to Home
-      </button>
-
       {/* LOGIN BOX */}
       <div className="login-box">
         <h2>Admin Login</h2>
@@ -43,7 +38,11 @@ export default function AdminLogin() {
           <button>Login</button>
         </form>
       </div>
-
+      {/* BACK TO HOME */}
+      <button className="back-btn"style={{textSizeAdjust:"10px"}} onClick={() => nav("/")}>
+        ← Back to Student Dashboard
+      </button>
     </div>
+
   );
 }

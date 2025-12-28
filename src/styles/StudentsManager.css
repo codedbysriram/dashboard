@@ -1,36 +1,60 @@
 /* ===============================
+   RESET
+================================ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ===============================
+   PAGE BACKGROUND
+================================ */
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.25), transparent 45%),
+    radial-gradient(circle at bottom right, rgba(22, 163, 74, 0.18), transparent 45%),
+    linear-gradient(135deg, #020617, #020617);
+  color: #e5e7eb;
+}
+
+/* ===============================
    MAIN CARD
 ================================ */
 .card {
+  position: relative; /* 🔴 REQUIRED */
   background: rgba(15, 23, 42, 0.92);
   backdrop-filter: blur(14px);
-  padding: 24px;
+  padding: 28px;
   border-radius: 18px;
   color: #e5e7eb;
   max-width: 1200px;
-  margin: 30px auto;
+  margin: 40px auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
+
 
 /* ===============================
    HEADINGS
 ================================ */
 .card h3 {
   text-align: center;
-  font-size: 24px;
-  margin-bottom: 20px;
+  font-size: 26px;
+  margin-bottom: 24px;
   color: #38bdf8;
 }
 
 .card h4 {
-  margin-top: 20px;
+  margin-top: 22px;
   margin-bottom: 10px;
   font-size: 18px;
   color: #e5e7eb;
 }
 
 .card h5 {
-  margin-top: 14px;
+  margin-top: 16px;
   margin-bottom: 8px;
   font-size: 15px;
   color: #94a3b8;
@@ -59,8 +83,16 @@
   padding: 6px;
 }
 
+/* Focus */
+.card input:focus,
+.card select:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
 /* ===============================
-   BUTTONS
+   BUTTONS (DEFAULT)
 ================================ */
 .card button {
   padding: 8px 14px;
@@ -71,7 +103,8 @@
   font-weight: 500;
   cursor: pointer;
   margin-right: 6px;
-  margin-top: 4px;
+  margin-top: 6px;
+  transition: all 0.25s ease;
 }
 
 .card button:hover {
@@ -101,7 +134,7 @@
 .card hr {
   border: none;
   border-top: 1px solid #1e293b;
-  margin: 20px 0;
+  margin: 22px 0;
 }
 
 /* ===============================
@@ -110,7 +143,7 @@
 .card table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .card thead th {
@@ -128,7 +161,7 @@
 }
 
 .card tbody tr:hover {
-  background: rgba(56, 189, 248, 0.05);
+  background: rgba(56, 189, 248, 0.06);
 }
 
 /* ===============================
@@ -143,7 +176,7 @@
 }
 
 /* ===============================
-   SUBJECT TABLE (SECOND TABLE)
+   SUBJECT TABLE HIGHLIGHT
 ================================ */
 .card table tbody tr td:first-child {
   font-weight: 600;
@@ -151,52 +184,32 @@
 }
 
 /* ===============================
-   SEARCH INPUT (ADMIN SEARCH)
-================================ */
-.card input[type="text"] {
-  outline: none;
-}
-
-.card input[type="text"]:focus,
-.card select:focus {
-  border-color: #38bdf8;
-}
-
-/* ===============================
    RESPONSIVE
 ================================ */
 @media (max-width: 900px) {
   .card {
-    padding: 18px;
-  }
-
-  .card table {
-    font-size: 13px;
+    padding: 20px;
   }
 }
 
 @media (max-width: 600px) {
   .card h3 {
-    font-size: 20px;
+    font-size: 22px;
   }
 
   .card button {
     width: 100%;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+  }
+
+  .back-btn {
+    top: 12px;
+    right: 12px;
+    font-size: 0.85rem;
   }
 
   .card img {
     width: 34px;
     height: 34px;
   }
-}
-.back-btn {
-  margin-bottom: 16px;
-  padding: 8px 14px;
-  background: linear-gradient(135deg, #2563eb, #1e40af);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
 }

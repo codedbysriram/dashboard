@@ -31,13 +31,11 @@ body {
   justify-content: center;
 }
 
-/* ================= BACK BUTTON ================= */
+/* ===============================
+   BACK BUTTON (TOP-LEFT)
+================================ */
 .back-btn {
-    margin-left: -450px;
-  position: absolute;
-  top: 20px;
-  left: 20px;
-
+  /* 🔥 SAME STYLE AS .top-btn */
   padding: 6px 14px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -51,12 +49,19 @@ body {
 
   box-shadow: 0 6px 16px rgba(30, 58, 138, 0.45);
   transition: all 0.25s ease;
+
+  /* 🔥 POSITION ONLY */
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
 }
 
 .back-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 24px rgba(37, 99, 235, 0.6);
 }
+
 
 /* ================= LOGIN BOX ================= */
 .login-box {
