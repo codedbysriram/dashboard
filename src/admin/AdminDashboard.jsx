@@ -6,8 +6,8 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const openOCRProject = () => {
-    // Only if OCR is a separate project
-    window.open("http://localhost:5173", "_blank");
+    // Open deployed OCR frontend
+    window.open("https://ocr-frontend-ufhf.vercel.app/", "_blank");
   };
 
   const logout = () => {
@@ -34,7 +34,6 @@ export default function AdminDashboard() {
 
       {/* MAIN ACTIONS */}
       <div className="admin-actions">
-
         <button onClick={openOCRProject}>
           Upload Result (OCR)
         </button>
@@ -42,8 +41,6 @@ export default function AdminDashboard() {
         <button onClick={() => navigate("/admin/students")}>
           Student Management
         </button>
-
-
       </div>
     </div>
   );
