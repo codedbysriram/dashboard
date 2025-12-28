@@ -33,7 +33,7 @@ body {
 
 /* ================= BACK BUTTON ================= */
 .back-btn {
-    margin-left: -450px;
+  margin-left: -450px;
   position: absolute;
   top: 20px;
   left: 20px;
@@ -45,6 +45,7 @@ body {
   background: linear-gradient(135deg, #1e3a8a, #020617);
   color: #ffffff;
 
+
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -54,8 +55,8 @@ body {
 }
 
 .back-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.6);
+   transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(37, 99, 235, 0.65);
 }
 
 /* ================= LOGIN BOX ================= */
