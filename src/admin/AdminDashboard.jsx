@@ -7,7 +7,7 @@ export default function AdminDashboard() {
 
   const openOCRProject = () => {
     // Open deployed OCR frontend
-    window.open("ocr-frontend-59ov-3ul5u0kya-codedbysrirams-projects.vercel.app", "_blank");
+    window.open("ocr-frontend-8x3m-qi2is9cvl-codedbysrirams-projects.vercel.app", "_blank");
   };
 
   const logout = () => {
