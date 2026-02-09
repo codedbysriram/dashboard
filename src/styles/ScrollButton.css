@@ -1,0 +1,25 @@
+.scroll-btn {
+  position: fixed !important;
+
+  /* Attach to SCREEN, not container */
+  right: 15px !important;
+  top: 50vh !important;
+
+  transform: translateY(-50%) !important;
+
+  padding: 12px 14px;
+  font-size: 14px;
+
+  border: none;
+  background: #0d6efd;
+  color: white;
+
+  border-radius: 10px;
+  cursor: pointer;
+
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+
+  z-index: 999999 !important;
+
+  pointer-events: auto;
+}

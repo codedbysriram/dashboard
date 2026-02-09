@@ -1,11 +1,26 @@
 /* =========================
-   PAGE CONTAINER
+   GLOBAL PAGE CONTAINER
 ========================= */
 .dashboard-container {
-  padding: 24px;
+  padding: 30px;
   color: #e5e7eb;
   min-height: 100vh;
-  background: linear-gradient(135deg, #020617, #020617);
+  width: 100%;
+  background: linear-gradient(160deg, #020617, #0b1221, #020617);
+  font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+/* Page Fade Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* =========================
@@ -15,60 +30,78 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .top-bar-student h3 {
-  font-size: 22px;
+  font-size: 26px;
+  letter-spacing: 1px;
   color: #38bdf8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
 }
 
+/* =========================
+   BUTTON STYLES
+========================= */
 .top-actions {
   display: flex;
-  gap: 12px;
+  gap: 14px;
 }
 
 .top-actions button {
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
   cursor: pointer;
-  background: rgba(56, 189, 248, 0.15);
+  background: rgba(56, 189, 248, 0.12);
   color: #38bdf8;
-  font-weight: 500;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.1);
 }
 
 .top-actions button:hover {
-  background: rgba(56, 189, 248, 0.25);
+  background: rgba(56, 189, 248, 0.3);
+  transform: translateY(-2px);
 }
 
 .admin-login-btn {
-  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.12);
   color: #22c55e;
 }
 
 .admin-login-btn:hover {
-  background: rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.3);
 }
 
 /* =========================
-   FILTERS
+   FILTER SECTION
 ========================= */
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 24px;
 }
 
 .filters input,
 .filters select {
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
   border: 1px solid #1e293b;
   background: #020617;
   color: #e5e7eb;
   font-size: 14px;
+  min-width: 200px;
+  transition: all 0.3s ease;
+}
+
+.filters input:focus,
+.filters select:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
 }
 
 .filters input::placeholder {
@@ -76,108 +109,161 @@
 }
 
 /* =========================
-   TABLE WRAPPER
+   TABLE WRAPPER (GLASS LOOK)
 ========================= */
 .table-wrapper {
-  background: rgba(15, 23, 42, 0.85);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
   overflow-x: auto;
+  border: 1px solid rgba(56, 189, 248, 0.15);
 }
 
 /* =========================
-   TABLE
+   TABLE DESIGN
 ========================= */
 table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 thead th {
-  padding: 12px;
-  font-size: 13px;
+  padding: 14px;
+  font-size: 14px;
   text-align: left;
   color: #94a3b8;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 2px solid #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 tbody td {
-  padding: 12px;
-  font-size: 14px;
+  padding: 14px;
+  font-size: 15px;
   border-bottom: 1px solid #1e293b;
+  transition: all 0.2s ease;
+}
+
+tbody tr {
+  transition: all 0.3s ease;
 }
 
 tbody tr:hover {
-  background: rgba(56, 189, 248, 0.06);
+  background: rgba(56, 189, 248, 0.08);
+  transform: scale(1.005);
 }
 
 /* =========================
    PROFILE IMAGE
 ========================= */
 .profile-img {
-  width: 42px;
-  height: 42px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #334155;
+  transition: all 0.3s ease;
+}
+
+.profile-img:hover {
+  transform: scale(1.1);
+  border-color: #38bdf8;
 }
 
 .topper-img {
   border-color: #facc15;
-  box-shadow: 0 0 10px rgba(250, 204, 21, 0.6);
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.7);
 }
 
 /* =========================
-   TOPPER TEXT
+   STATUS TEXT STYLES
 ========================= */
 .topper-text {
   color: #facc15;
-  font-weight: 600;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.5);
 }
 
-/* =========================
-   POSITION / ARREAR
-========================= */
 .position {
-  font-weight: 600;
+  font-weight: 700;
   color: #38bdf8;
 }
 
 .arrear {
   color: #ef4444;
-  font-weight: 600;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
 }
 
 .clear {
   color: #22c55e;
-  font-weight: 600;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
 }
 
 /* =========================
-   NO DATA
+   NO DATA MESSAGE
 ========================= */
 .no-data {
   text-align: center;
-  padding: 16px;
+  padding: 20px;
   color: #94a3b8;
+  font-size: 16px;
+  letter-spacing: 1px;
 }
 
 /* =========================
-   RESPONSIVE
+   SCROLLBAR STYLE
 ========================= */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #38bdf8;
+  border-radius: 10px;
+}
+
+/* =========================
+   RESPONSIVE DESIGN
+========================= */
+@media (max-width: 1024px) {
+  .dashboard-container {
+    padding: 20px;
+  }
+}
+
 @media (max-width: 768px) {
   .top-bar-student {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 14px;
   }
 
   .filters {
     flex-direction: column;
+    width: 100%;
+  }
+
+  .filters input,
+  .filters select {
+    width: 100%;
   }
 
   table {
     font-size: 13px;
+  }
+
+  thead th,
+  tbody td {
+    padding: 10px;
   }
 }

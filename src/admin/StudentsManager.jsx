@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/StudentsManager.css";
+import { supabase } from "../supabaseClient";
+import ScrollButton from "../components/ScrollButton";
+
 
 export default function StudentsManager() {
   const navigate = useNavigate();
-
 
   /* ================= STATE ================= */
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [subjects, setSubjects] = useState([]);
 
-  const [photo, setPhoto] = useState(null);          // add student photo
-  const [editPhoto, setEditPhoto] = useState(null);  // edit student photo
+  const [photo, setPhoto] = useState(null);
+  const [editPhoto, setEditPhoto] = useState(null);
 
   const [semesterFilter, setSemesterFilter] = useState("");
 
@@ -30,7 +32,8 @@ export default function StudentsManager() {
   const [studentForm, setStudentForm] = useState({
     regno: "",
     name: "",
-    department: ""
+    department: "",
+    year: ""
   });
 
   const [subjectForm, setSubjectForm] = useState({
@@ -41,17 +44,48 @@ export default function StudentsManager() {
     ea: ""
   });
 
-  /* 🔍 SEARCH STATE (ADDED ONLY) */
   const [search, setSearch] = useState("");
 
-  const API_STUDENTS = "http://localhost:5000/api/students";
-  const API_RESULTS = "http://localhost:5000/api/results";
+  /* ================= HELPERS ================= */
+
+  const getPhotoUrl = (photo) => {
+    return photo && photo.trim() !== "" ? photo : "/default.png";
+  };
+
+
+  const uploadPhotoToSupabase = async (file, regno) => {
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${regno}.${fileExt}`;
+
+      const { error } = await supabase.storage
+        .from("student-photos")
+        .upload(fileName, file, { upsert: true });
+
+      if (error) throw error;
+
+      const { data } = supabase.storage
+        .from("student-photos")
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Image upload failed");
+      return null;
+    }
+  };
 
   /* ================= LOAD STUDENTS ================= */
-  const loadStudents = () => {
-    fetch(API_STUDENTS)
-      .then(res => res.json())
-      .then(data => setStudents(data || []));
+
+  const loadStudents = async () => {
+    const { data } = await supabase
+      .from("student_results")
+      .select("*")
+      .order("regno");
+
+    setStudents(data || []);
   };
 
   useEffect(() => {
@@ -59,34 +93,58 @@ export default function StudentsManager() {
   }, []);
 
   /* ================= LOAD SUBJECTS ================= */
-  const loadSubjects = regno => {
-    fetch(`${API_RESULTS}/${regno}`)
-      .then(res => res.json())
-      .then(data => setSubjects(data || []));
+
+  const loadSubjects = async (regno) => {
+    const { data } = await supabase
+      .from("student_results")
+      .select("*")
+      .eq("regno", regno)
+      .order("semester");
+
+    setSubjects(data || []);
   };
 
   /* ================= ADD STUDENT ================= */
-  const addStudent = () => {
-    if (!studentForm.regno || !studentForm.name) {
-      alert("Reg No and Name required");
-      return;
-    }
 
-    const fd = new FormData();
-    fd.append("regno", studentForm.regno);
-    fd.append("name", studentForm.name);
-    fd.append("department", studentForm.department);
-    if (photo) fd.append("photo", photo);
+  const addStudent = async () => {
+  if (!studentForm.regno || !studentForm.name) {
+    alert("Reg No and Name required");
+    return;
+  }
 
-    fetch(API_STUDENTS, { method: "POST", body: fd }).then(() => {
-      setStudentForm({ regno: "", name: "", department: "" });
-      setPhoto(null);
-      loadStudents();
-    });
-  };
+  let photoUrl = null;
+
+  if (photo) {
+    photoUrl = await uploadPhotoToSupabase(photo, studentForm.regno);
+  }
+
+  const { data, error } = await supabase
+    .from("student_results")
+    .insert([
+      {
+        ...studentForm,
+        photo: photoUrl
+      }
+    ])
+    .select(); // ✅ IMPORTANT
+
+  if (error) {
+    console.error(error);
+    alert("Failed to add student");
+    return;
+  }
+
+  // ✅ Update UI instantly (NO reload)
+  setStudents(prev => [...prev, data[0]]);
+
+  // reset form
+  setStudentForm({ regno: "", name: "", department: "", year: "" });
+  setPhoto(null);
+};
 
   /* ================= EDIT STUDENT ================= */
-  const startEditStudent = s => {
+
+  const startEditStudent = (s) => {
     setEditingStudentId(s.id);
     setEditStudentForm({
       regno: s.regno,
@@ -94,61 +152,77 @@ export default function StudentsManager() {
       department: s.department,
       year: s.year
     });
+  };
+
+  const updateStudent = async (id) => {
+    let photoUrl = null;
+
+    if (editPhoto) {
+      photoUrl = await uploadPhotoToSupabase(editPhoto, editStudentForm.regno);
+    }
+
+    await supabase
+      .from("student_results")
+      .update({
+        ...editStudentForm,
+        photo: photoUrl || undefined
+      })
+      .eq("id", id);
+
+    setEditingStudentId(null);
     setEditPhoto(null);
+    loadStudents();
   };
 
-  const updateStudent = id => {
-    const fd = new FormData();
-    fd.append("regno", editStudentForm.regno);
-    fd.append("name", editStudentForm.name);
-    fd.append("department", editStudentForm.department);
-    fd.append("year", editStudentForm.year);
-    if (editPhoto) fd.append("photo", editPhoto);
-
-    fetch(`${API_STUDENTS}/${id}`, {
-      method: "PUT",
-      body: fd
-    }).then(() => {
-      setEditingStudentId(null);
-      setEditPhoto(null);
-      loadStudents();
-    });
-  };
 
   /* ================= DELETE STUDENT ================= */
-  const deleteStudent = id => {
-    if (!window.confirm("Delete this student and all subjects?")) return;
 
-    fetch(`${API_STUDENTS}/${id}`, { method: "DELETE" })
-      .then(() => {
-        if (selectedStudent && selectedStudent.id === id) {
-          setSelectedStudent(null);
-        }
-        loadStudents();
-      });
+  const deleteStudent = async (id, photoUrl) => {
+    if (!window.confirm("Delete this student?")) return;
+
+    if (photoUrl) {
+      const fileName = photoUrl.split("/").pop();
+
+      await supabase.storage
+        .from("student-photos")
+        .remove([fileName]);
+    }
+
+    await supabase
+      .from("student_results")
+      .delete()
+      .eq("id", id);
+
+    loadStudents();
   };
 
+
   /* ================= SELECT STUDENT ================= */
-  const selectStudent = s => {
+
+  const selectStudent = (s) => {
     setSelectedStudent(s);
     setSemesterFilter("");
     loadSubjects(s.regno);
   };
 
   /* ================= ADD SUBJECT ================= */
-  const addSubject = () => {
+
+  const addSubject = async () => {
     if (!selectedStudent) return;
 
     const { semester, subject_code, subject_title } = subjectForm;
+
     if (!semester || !subject_code || !subject_title) {
       alert("Fill all subject fields");
       return;
     }
 
-    fetch(API_RESULTS, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const total =
+      Number(subjectForm.ia || 0) +
+      Number(subjectForm.ea || 0);
+
+    await supabase.from("student_results").insert([
+      {
         ...subjectForm,
         regno: selectedStudent.regno,
         name: selectedStudent.name,
@@ -156,55 +230,68 @@ export default function StudentsManager() {
         year: selectedStudent.year,
         semester: Number(subjectForm.semester),
         ia: Number(subjectForm.ia || 0),
-        ea: Number(subjectForm.ea || 0)
-      })
-    }).then(() => {
-      loadSubjects(selectedStudent.regno);
-      setSubjectForm({
-        semester: "",
-        subject_code: "",
-        subject_title: "",
-        ia: "",
-        ea: ""
-      });
+        ea: Number(subjectForm.ea || 0),
+        total,
+        result: total >= 50 ? "PASS" : "RA"
+      }
+    ]);
+
+    loadSubjects(selectedStudent.regno);
+
+    setSubjectForm({
+      semester: "",
+      subject_code: "",
+      subject_title: "",
+      ia: "",
+      ea: ""
     });
   };
 
   /* ================= DELETE SUBJECT ================= */
-  const deleteSubject = id => {
-    if (!window.confirm("Delete this subject?")) return;
-    fetch(`${API_RESULTS}/${id}`, { method: "DELETE" })
-      .then(() => loadSubjects(selectedStudent.regno));
+
+  const deleteSubject = async (id) => {
+    if (!window.confirm("Delete subject?")) return;
+
+    await supabase
+      .from("student_results")
+      .delete()
+      .eq("id", id);
+
+    loadSubjects(selectedStudent.regno);
   };
 
   /* ================= EDIT MARKS ================= */
-  const startEditMarks = sub => {
+
+  const startEditMarks = (sub) => {
     setEditingSubjectId(sub.id);
     setEditMarks({ ia: sub.ia, ea: sub.ea });
   };
 
-  const updateMarks = id => {
-    fetch(`${API_RESULTS}/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  const updateMarks = async (id) => {
+    const total =
+      Number(editMarks.ia) +
+      Number(editMarks.ea);
+
+    await supabase
+      .from("student_results")
+      .update({
         ia: Number(editMarks.ia),
-        ea: Number(editMarks.ea)
+        ea: Number(editMarks.ea),
+        total,
+        result: total >= 50 ? "PASS" : "RA"
       })
-    }).then(() => {
-      setEditingSubjectId(null);
-      loadSubjects(selectedStudent.regno);
-    });
+      .eq("id", id);
+
+    setEditingSubjectId(null);
+    loadSubjects(selectedStudent.regno);
   };
 
-  const total = Number(subjectForm.ia || 0) + Number(subjectForm.ea || 0);
-  const editTotal = Number(editMarks.ia || 0) + Number(editMarks.ea || 0);
+  /* ================= FILTERS ================= */
 
   const filteredSubjects = semesterFilter
     ? subjects.filter(s => String(s.semester) === semesterFilter)
     : subjects;
 
-  /* 🔍 FILTER STUDENTS (ADDED ONLY) */
   const filteredStudents = students.filter(s =>
     s.regno.toLowerCase().includes(search.toLowerCase()) ||
     s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -212,183 +299,330 @@ export default function StudentsManager() {
   );
 
   /* ================= UI ================= */
+
   return (
     <div className="card">
-      <button className="back-bn" onClick={() => navigate("/admin/dashboard")}>
+      <button onClick={() => navigate("/admin/dashboard")}>
         ← Back to Dashboard
       </button>
+
       <h3>Student & Subject Management</h3>
-      
-      {/* ===== ADD STUDENT ===== */}
+
+      {/* ADD STUDENT */}
       <h4>Add Student</h4>
-      <input placeholder="Reg No" value={studentForm.regno}
-        onChange={e => setStudentForm({ ...studentForm, regno: e.target.value })} />
-      <input placeholder="Name" value={studentForm.name}
-        onChange={e => setStudentForm({ ...studentForm, name: e.target.value })} />
-      <input placeholder="Department" value={studentForm.department}
-        onChange={e => setStudentForm({ ...studentForm, department: e.target.value })} />
-      <input type="file" accept="image/*"
-        onChange={e => setPhoto(e.target.files[0])} />
+
+      <input
+        placeholder="Reg No"
+        value={studentForm.regno}
+        onChange={e =>
+          setStudentForm({ ...studentForm, regno: e.target.value })
+        }
+      />
+
+      <input
+        placeholder="Name"
+        value={studentForm.name}
+        onChange={e =>
+          setStudentForm({ ...studentForm, name: e.target.value })
+        }
+      />
+
+      <input
+        placeholder="Department"
+        value={studentForm.department}
+        onChange={e =>
+          setStudentForm({ ...studentForm, department: e.target.value })
+        }
+      />
+
+      <select
+        value={studentForm.year}
+        onChange={e =>
+          setStudentForm({ ...studentForm, year: e.target.value })
+        }
+      >
+        <option value="">Year</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+      </select>
+
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => {
+          const file = e.target.files[0];
+
+          if (!file) return;
+
+          // Basic validation
+          if (!file.type.startsWith("image/")) {
+            alert("Please select a valid image file");
+            return;
+          }
+
+          // Optional size limit (2MB)
+          if (file.size > 2 * 1024 * 1024) {
+            alert("Image size should be less than 2MB");
+            return;
+          }
+
+          setPhoto(file);
+        }}
+      />
+
+
       <button onClick={addStudent}>Add Student</button>
 
       <hr />
 
-      {/* 🔍 SEARCH STUDENT (ADDED ONLY) */}
+      {/* SEARCH */}
       <input
-        type="text"
-        placeholder="Search by Reg No / Name / Department"
+        placeholder="Search..."
         value={search}
         onChange={e => setSearch(e.target.value)}
-        style={{ marginBottom: "10px", padding: "8px", width: "100%" }}
       />
+      {editingStudentId && (
+        <div className="edit-student">
+          <h4>Edit Student</h4>
 
-      {/* ===== STUDENT LIST ===== */}
-      <h4>Students</h4>
+          <input
+            value={editStudentForm.name}
+            onChange={e =>
+              setEditStudentForm({
+                ...editStudentForm,
+                name: e.target.value
+              })
+            }
+          />
+
+          <input
+            value={editStudentForm.department}
+            onChange={e =>
+              setEditStudentForm({
+                ...editStudentForm,
+                department: e.target.value
+              })
+            }
+          />
+
+          <select
+            value={editStudentForm.year}
+            onChange={e =>
+              setEditStudentForm({
+                ...editStudentForm,
+                year: e.target.value
+              })
+            }
+          >
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e => setEditPhoto(e.target.files[0])}
+          />
+
+          <button onClick={() => updateStudent(editingStudentId)}>
+            Update Student
+          </button>
+
+          <button onClick={() => setEditingStudentId(null)}>
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* STUDENTS TABLE */}
       <table>
-        <thead>
-          <tr>
-            <th>Reg No</th>
-            <th>Name</th>
-            <th>Department</th>
-            <th>Year</th>
-            <th>Photo</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-
         <tbody>
-
           {filteredStudents.map(s => (
-            <tr key={s.id}>
-              {editingStudentId === s.id ? (
-                <>
-                  <td><input value={editStudentForm.regno}
-                    onChange={e => setEditStudentForm({ ...editStudentForm, regno: e.target.value })} /></td>
-                  <td><input value={editStudentForm.name}
-                    onChange={e => setEditStudentForm({ ...editStudentForm, name: e.target.value })} /></td>
-                  <td><input value={editStudentForm.department}
-                    onChange={e => setEditStudentForm({ ...editStudentForm, department: e.target.value })} /></td>
-                  <td>
-                    <select
-                      value={editStudentForm.year}
-                      onChange={e =>
-                        setEditStudentForm({ ...editStudentForm, year: e.target.value })
-                      }
-                    >
-                      <option value="">Year</option>
-                      <option value="1">1st Year</option>
-                      <option value="2">2nd Year</option>
-                      <option value="3">3rd Year</option>
-                    </select>
-                  </td>
+            <React.Fragment key={s.id}>
+              <tr>
+                <td>{s.regno}</td>
+                <td>{s.name}</td>
+                <td>{s.department}</td>
+                <td>{s.year}</td>
 
-                  <td><input type="file" accept="image/*"
-                    onChange={e => setEditPhoto(e.target.files[0])} /></td>
-                  <td>
-                    <button onClick={() => updateStudent(s.id)}>Update</button>
-                    <button onClick={() => setEditingStudentId(null)}>Cancel</button>
-                  </td>
-                </>
-              ) : (
-                <>
-                  <td>{s.regno}</td>
-                  <td>{s.name}</td>
-                  <td>{s.department}</td>
-                  <td>{s.year}</td>
+                <td>
+                  <img
+                    src={getPhotoUrl(s.photo)}
+                    width="40"
+                    height="40"
+                    style={{ borderRadius: "50%", objectFit: "cover" }}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/default.png";
+                    }}
+                  />
+                </td>
 
-                  <td>
-                    {s.photo && (
-                      <img
-                        src={`http://localhost:5000/uploads/${s.photo}`}
-                        alt="profile"
-                        style={{ width: 40, height: 40, borderRadius: "50%" }}
-                      />
-                    )}
-                  </td>
-                  <td>
-                    <button onClick={() => selectStudent(s)}>Manage</button>
-                    <button onClick={() => startEditStudent(s)}>Edit</button>
-                    <button
-                      style={{ background: "#ff4d4d", color: "#fff" }}
-                      onClick={() => deleteStudent(s.id)}
-                    >
-                      Remove
-                    </button>
-                  </td>
+                <td>
+                  <button onClick={() => selectStudent(s)}>
+                    Manage
+                  </button>
 
-                </>
+                  <button onClick={() => startEditStudent(s)}>
+                    Edit
+                  </button>
+
+                  <button onClick={() => deleteStudent(s.id)}>
+                    Delete
+                  </button>
+                </td>
+              </tr>
+
+              {/* INLINE SUBJECT PANEL */}
+              {selectedStudent?.id === s.id && (
+                <tr>
+                  <td colSpan="6">
+                    <div className="manage-box">
+
+                      <h4>Subjects - {s.name}</h4>
+
+                      {/* SUBJECT ADD FORM */}
+                      <div className="add-subject-row">
+                        <input
+                          placeholder="Semester"
+                          onChange={e =>
+                            setSubjectForm({ ...subjectForm, semester: e.target.value })
+                          }
+                        />
+
+                        <input
+                          placeholder="Code"
+                          onChange={e =>
+                            setSubjectForm({ ...subjectForm, subject_code: e.target.value })
+                          }
+                        />
+
+                        <input
+                          placeholder="Title"
+                          onChange={e =>
+                            setSubjectForm({ ...subjectForm, subject_title: e.target.value })
+                          }
+                        />
+
+                        <input
+                          placeholder="IA"
+                          type="number"
+                          onChange={e =>
+                            setSubjectForm({ ...subjectForm, ia: e.target.value })
+                          }
+                        />
+
+                        <input
+                          placeholder="EA"
+                          type="number"
+                          onChange={e =>
+                            setSubjectForm({ ...subjectForm, ea: e.target.value })
+                          }
+                        />
+
+                        <button onClick={addSubject}>Add</button>
+                      </div>
+
+                      {/* SUBJECT MARKS TABLE */}
+                      <table className="inner-table">
+                        <thead>
+                          <tr>
+                            <th>Semester</th>
+                            <th>Code</th>
+                            <th>Title</th>
+                            <th>IA</th>
+                            <th>EA</th>
+                            <th>Total</th>
+                            <th>Result</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {subjects.map(sub => (
+                            <tr key={sub.id}>
+                              <td>{sub.semester}</td>
+                              <td>{sub.subject_code}</td>
+                              <td>{sub.subject_title}</td>
+                              <td>{sub.ia}</td>
+                              <td>{sub.ea}</td>
+                              <td>{sub.total}</td>
+                              <td>{sub.result}</td>
+
+                              <td>
+                                <button onClick={() => startEditMarks(sub)}>
+                                  Edit
+                                </button>
+
+                                <button onClick={() => deleteSubject(sub.id)}>
+                                  Delete
+                                </button>
+
+
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                    </div>
+                  </td>
+                </tr>
               )}
-            </tr>
+            </React.Fragment>
           ))}
         </tbody>
       </table>
 
-      {/* ===== SUBJECT / MARKS ===== */}
+
+      {/* SUBJECTS */}
       {selectedStudent && (
         <>
-          <h4>Subjects – {selectedStudent.name}</h4>
+          <h4>Subjects - {selectedStudent.name}</h4>
 
-          <h5>Add Subject / Marks</h5>
-          <select value={subjectForm.semester}
-            onChange={e => setSubjectForm({ ...subjectForm, semester: e.target.value })}>
-            <option value="">Semester</option>
-            {[1, 2, 3, 4, 5, 6].map(s => <option key={s}>{s}</option>)}
-          </select>
+          <input
+            placeholder="Semester"
+            onChange={e =>
+              setSubjectForm({ ...subjectForm, semester: e.target.value })
+            }
+          />
 
-          <input placeholder="Subject Code"
-            value={subjectForm.subject_code}
-            onChange={e => setSubjectForm({ ...subjectForm, subject_code: e.target.value })} />
-          <input placeholder="Subject Title"
-            value={subjectForm.subject_title}
-            onChange={e => setSubjectForm({ ...subjectForm, subject_title: e.target.value })} />
-          <input type="number" placeholder="IA"
-            value={subjectForm.ia}
-            onChange={e => setSubjectForm({ ...subjectForm, ia: e.target.value })} />
-          <input type="number" placeholder="EA"
-            value={subjectForm.ea}
-            onChange={e => setSubjectForm({ ...subjectForm, ea: e.target.value })} />
-          <input readOnly value={total} placeholder="Total" />
+          <input
+            placeholder="Code"
+            onChange={e =>
+              setSubjectForm({ ...subjectForm, subject_code: e.target.value })
+            }
+          />
+
+          <input
+            placeholder="Title"
+            onChange={e =>
+              setSubjectForm({ ...subjectForm, subject_title: e.target.value })
+            }
+          />
+
+          <input
+            placeholder="IA"
+            type="number"
+            onChange={e =>
+              setSubjectForm({ ...subjectForm, ia: e.target.value })
+            }
+          />
+
+          <input
+            placeholder="EA"
+            type="number"
+            onChange={e =>
+              setSubjectForm({ ...subjectForm, ea: e.target.value })
+            }
+          />
+
           <button onClick={addSubject}>Add Subject</button>
-
-          <hr />
-
-          <table>
-            <tbody>
-              {filteredSubjects.map(sub => (
-                <tr key={sub.id}>
-                  <td>{sub.semester}</td>
-                  <td>{sub.subject_code}</td>
-                  <td>{sub.subject_title}</td>
-
-                  {editingSubjectId === sub.id ? (
-                    <>
-                      <td><input type="number" value={editMarks.ia}
-                        onChange={e => setEditMarks({ ...editMarks, ia: e.target.value })} /></td>
-                      <td><input type="number" value={editMarks.ea}
-                        onChange={e => setEditMarks({ ...editMarks, ea: e.target.value })} /></td>
-                      <td>{editTotal}</td>
-                      <td>
-                        <button onClick={() => updateMarks(sub.id)}>Update</button>
-                        <button onClick={() => setEditingSubjectId(null)}>Cancel</button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td>{sub.ia}</td>
-                      <td>{sub.ea}</td>
-                      <td>{sub.total}</td>
-                      <td>
-                        <button onClick={() => startEditMarks(sub)}>Edit</button>
-                        <button onClick={() => deleteSubject(sub.id)}>Delete</button>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </>
       )}
+      <ScrollButton />
     </div>
   );
 }

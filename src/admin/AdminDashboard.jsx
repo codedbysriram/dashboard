@@ -5,9 +5,9 @@ import "../styles/AdminDashboard.css";
 export default function AdminDashboard() {
   const navigate = useNavigate();
 
+  // Navigate internally to OCR upload page
   const openOCRProject = () => {
-    // Open deployed OCR frontend
-    window.open("https://ocr-frontend-murex.vercel.app/", "_blank");
+    navigate("/admin/upload");
   };
 
   const logout = () => {

@@ -1,15 +1,77 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/StudentDashboard.css";
+import { supabase } from "../supabaseClient";
 
-const getTotalMarks = s => Number(s.total_marks || 0);
+
+
+/* ✅ Group subject rows into one student record */
+const groupStudentRows = (rows) => {
+  const map = new Map();
+
+  rows.forEach((r) => {
+    if (!r.regno) return;
+
+    if (!map.has(r.regno)) {
+      map.set(r.regno, {
+        regno: r.regno,
+        name: r.name || "",
+        year: r.year || "",
+        photo: r.photo || "",
+        subjects: [],
+        arrears: 0,
+        cgpa: 0,
+      });
+    }
+
+    const student = map.get(r.regno);
+
+    const marks = r.total ? Number(r.total) : null;
+    const status = (r.result || "").toUpperCase();
+    const isArrear = status === "RA" || status === "AA";
+
+    let gpa = null;
+
+    if (marks !== null) {
+      gpa = isArrear ? 0 : Number((marks / 10).toFixed(1));
+    }
+
+    student.subjects.push({
+      subject_title: r.subject_title,
+      total: marks,
+      result: r.result,
+      gpa: gpa,
+    });
+
+    if (isArrear) {
+      student.arrears += 1;
+    }
+  });
+
+  const result = Array.from(map.values());
+
+  // 🔥 CORRECT CGPA CALCULATION
+  result.forEach((student) => {
+    const validGpas = student.subjects
+      .map((s) => s.gpa)
+      .filter((g) => g !== null);
+
+    if (validGpas.length > 0) {
+      const avg =
+        validGpas.reduce((a, b) => a + b, 0) / validGpas.length;
+
+      student.cgpa = avg.toFixed(2);
+    } else {
+      student.cgpa = "-";
+    }
+  });
+
+  return result;
+};
 
 export default function StudentsHome() {
-
-  /* ================= STATE ================= */
   const [students, setStudents] = useState([]);
   const [subjects, setSubjects] = useState([]);
-  
 
   const [year, setYear] = useState("");
   const [semester, setSemester] = useState("");
@@ -23,44 +85,109 @@ export default function StudentsHome() {
   const navigate = useNavigate();
 
   /* ================= BOARD ROLE ================= */
-  const getBoardRole = (year, rank) => {
-    if (year === 1 && rank === 1) return "Treasurer";
-    if (year === 2 && rank === 1) return "Secretary";
-    if (year === 2 && rank === 2) return "Joint Secretary";
-    if (year === 3 && rank === 1) return "Chairman";
-    if (year === 3 && rank === 2) return "Vice Chairman";
-    return "-";
+  const assignBoardMembersByCgpa = (students) => {
+    const yearGroups = {
+      1: [],
+      2: [],
+      3: []
+    };
+
+    // Group students by year
+    students.forEach((s) => {
+      if (s.year && yearGroups[s.year]) {
+        yearGroups[s.year].push(s);
+      }
+    });
+
+    // Sort each year by CGPA (high → low)
+    Object.keys(yearGroups).forEach((year) => {
+      yearGroups[year].sort((a, b) => Number(b.cgpa) - Number(a.cgpa));
+    });
+
+    const boardMap = new Map();
+
+    // Assign roles based on CGPA rank
+    if (yearGroups[1]?.length) {
+      boardMap.set(yearGroups[1][0].regno, "Treasurer");
+    }
+
+    if (yearGroups[2]?.length) {
+      boardMap.set(yearGroups[2][0].regno, "Secretary");
+
+      if (yearGroups[2][1]) {
+        boardMap.set(yearGroups[2][1].regno, "Joint Secretary");
+      }
+    }
+
+    if (yearGroups[3]?.length) {
+      boardMap.set(yearGroups[3][0].regno, "Chairman");
+
+      if (yearGroups[3][1]) {
+        boardMap.set(yearGroups[3][1].regno, "Vice Chairman");
+      }
+    }
+
+    return boardMap;
   };
 
-  /* ================= FETCH SUBJECT LIST ================= */
+  /* ✅ Fetch subjects (year + semester wise) */
   useEffect(() => {
-    let url = "http://localhost:5000/api/subjects";
-    if (year) url += `?year=${year}`;
+    const fetchSubjectsFromResults = async () => {
+      let query = supabase
+        .from("student_results")
+        .select("subject_title");
 
-    fetch(url)
-      .then(res => res.json())
-      .then(data => setSubjects(Array.isArray(data) ? data : []))
-      .catch(err => console.error("Subject fetch error:", err));
-  }, [year]);
+      if (year) query = query.eq("year", year);
+      if (semester) query = query.eq("semester", semester);
 
-  /* ================= FETCH STUDENTS ================= */
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Subject fetch error:", error);
+        return;
+      }
+
+      const unique = [
+        ...new Set((data || []).map((d) => d.subject_title))
+      ];
+
+      setSubjects(unique.map((s) => ({ subject_title: s })));
+    };
+
+    fetchSubjectsFromResults();
+  }, [year, semester]);
+
+
+  /* ✅ Fetch results */
   useEffect(() => {
-    let url = "http://localhost:5000/api/results?";
-    if (year) url += `year=${year}&`;
-    if (semester) url += `semester=${semester}&`;
-    if (subject) url += `subject=${encodeURIComponent(subject)}&`;
+    const fetchResults = async () => {
+      console.log("🔍 Fetching RAW data from Supabase...");
 
-    fetch(url)
-      .then(res => res.json())
-      .then(data => setStudents(Array.isArray(data) ? data : []))
-      .catch(err => console.error("Student fetch error:", err));
-  }, [year, semester, subject]);
+      const { data, error } = await supabase
+        .from("student_results")
+        .select("*");
+
+      console.log("RAW SUPABASE DATA:", data);
+
+      if (error) {
+        console.error("Student fetch error:", error);
+      } else {
+        const grouped = groupStudentRows(data || []);
+        setStudents(grouped);
+      }
+    };
+
+    fetchResults();
+
+  }, []);
+
 
   /* ================= FILTER + RANK ================= */
-  const filteredStudents = (() => {
+  const filteredStudents = useMemo(() => {
+    let base = [...students];
 
-    // FILTER
-    const base = students.filter(s => {
+    // ✅ Search + arrear filter
+    base = base.filter((s) => {
       const arrears = Number(s.arrears || 0);
 
       const arrearMatch =
@@ -71,59 +198,161 @@ export default function StudentsHome() {
         (arrear === "3" && arrears >= 3);
 
       const searchMatch =
-        s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.regno.toLowerCase().includes(search.toLowerCase());
+        (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
+        (s.regno || "").toLowerCase().includes(search.toLowerCase());
 
       return arrearMatch && searchMatch;
     });
 
-    // SUBJECT PAGE → MARKS RANK
-    if (subject) {
-      return [...base]
-        .sort((a, b) => (b.marks || 0) - (a.marks || 0))
-        .map((s, i) => ({ ...s, position: i + 1 }));
-    }
+    const groupStudentRows = (rows) => {
+      const map = new Map();
 
-    // HOME PAGE → CGPA RANK (WITH TIE BREAK)
-    const groupedByYear = base.reduce((acc, s) => {
-      acc[s.year] = acc[s.year] || [];
-      acc[s.year].push(s);
-      return acc;
-    }, {});
+      rows.forEach((r) => {
+        if (!r.regno) return;
 
-    const ranked = [];
+        if (!map.has(r.regno)) {
+          map.set(r.regno, {
+            regno: r.regno,
+            name: r.name || "",
+            year: r.year || "",
+            photo: r.photo || "",
+            subjects: [],
+            arrears: 0,
+            cgpa: 0,
+          });
+        }
 
-    Object.values(groupedByYear).forEach(group => {
-      const sorted = [...group].sort((a, b) => {
-        if (b.cgpa !== a.cgpa) return b.cgpa - a.cgpa;
-        if (getTotalMarks(b) !== getTotalMarks(a))
-          return getTotalMarks(b) - getTotalMarks(a);
-        return a.regno.localeCompare(b.regno);
+        const student = map.get(r.regno);
+
+        const marks = r.total ? Number(r.total) : null;
+        const status = (r.result || "").toUpperCase();
+        const isArrear = status === "RA" || status === "AA";
+
+        // GPA for this subject
+        let gpa = null;
+
+        if (marks !== null) {
+          gpa = isArrear ? 0 : Number((marks / 10).toFixed(1));
+        }
+
+        student.subjects.push({
+          subject_title: r.subject_title,
+          total: marks,
+          result: r.result,
+          gpa: gpa,
+        });
+
+        // count arrears
+        if (isArrear) {
+          student.arrears += 1;
+        }
       });
 
-      sorted.forEach((s, i) => ranked.push({ ...s, rank: i + 1 }));
-    });
+      const result = Array.from(map.values());
 
-    return ranked;
-  })();
+      // 🔥 ACTUAL CGPA CALCULATION
+      result.forEach((student) => {
+        const validGpas = student.subjects
+          .map((s) => s.gpa)
+          .filter((g) => g !== null);
 
-  /* ================= FINAL SORT (NAME / REGNO) ================= */
-  const finalStudents = (() => {
+        if (validGpas.length > 0) {
+          const avg =
+            validGpas.reduce((a, b) => a + b, 0) / validGpas.length;
+
+          student.cgpa = avg.toFixed(2);
+        } else {
+          student.cgpa = "-";
+        }
+      });
+
+      return result;
+    };
+
+    // ✅ If subject selected → calculate marks & position
+    if (subject) {
+      const ranked = base
+        .map((s) => {
+          const subRow = s.subjects.find((x) => x.subject_title === subject);
+
+          const marks =
+            subRow?.total && /^\d+$/.test(subRow.total)
+              ? Number(subRow.total)
+              : null;
+
+          const status = (subRow?.result || "").toUpperCase();
+          const isArrear = status === "RA" || status === "AA";
+
+          let gpa = "-";
+
+          if (marks !== null) {
+            gpa = isArrear ? "0.0" : (marks / 10).toFixed(1);
+          }
+
+          return {
+            ...s,
+            marks,
+            gpa
+          };
+        })
+        .sort((a, b) => (b.marks || 0) - (a.marks || 0))
+        .map((s, i) => ({
+          ...s,
+          position: i + 1,
+          gpa: s.gpa
+
+        }));
+
+      return ranked;
+    }
+
+
+    // ✅ Normal view (rank based on arrears low)
+    const rankedByArrears = [...base].sort(
+      (a, b) => Number(a.arrears || 0) - Number(b.arrears || 0)
+    );
+
+    return rankedByArrears.map((s, i) => ({ ...s, rank: i + 1 }));
+  }, [students, arrear, search, subject]);
+
+  /* ================= FINAL SORT ================= */
+  const finalStudents = useMemo(() => {
     let list = [...filteredStudents];
 
-    if (nameSort === "az") list.sort((a, b) => a.name.localeCompare(b.name));
-    if (nameSort === "za") list.sort((a, b) => b.name.localeCompare(a.name));
+    if (nameSort === "az") list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    if (nameSort === "za") list.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
 
-    if (regnoSort === "asc") list.sort((a, b) => a.regno.localeCompare(b.regno));
-    if (regnoSort === "desc") list.sort((a, b) => b.regno.localeCompare(a.regno));
+    if (regnoSort === "asc") list.sort((a, b) => (a.regno || "").localeCompare(b.regno || ""));
+    if (regnoSort === "desc") list.sort((a, b) => (b.regno || "").localeCompare(a.regno || ""));
 
     return list;
-  })();
+  }, [filteredStudents, nameSort, regnoSort]);
 
-  /* ================= UI ================= */
+  const boardMembers = assignBoardMembersByCgpa(students);
+
+  const studentsWithPhotos = useMemo(() => {
+    return finalStudents.map((s) => {
+      let finalPhoto = "/default.png";
+
+      if (s.photo && s.photo.trim() !== "") {
+        if (s.photo.startsWith("http")) {
+          finalPhoto = s.photo;
+        } else {
+          finalPhoto = supabase.storage
+            .from("student-photos")
+            .getPublicUrl(s.photo).data.publicUrl;
+        }
+      }
+
+      return {
+        ...s,
+        displayPhoto: finalPhoto
+      };
+    });
+  }, [finalStudents]);
+
   return (
     <div className="dashboard-container">
-
       {/* TOP BAR */}
       <div className="top-bar-student">
         <h3>Student Result Dashboard</h3>
@@ -137,33 +366,46 @@ export default function StudentsHome() {
 
       {/* FILTERS */}
       <div className="filters">
-
         <input
           type="text"
           placeholder="Search by name / reg no"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
         />
 
-        <select value={year} onChange={e => {
-          setYear(e.target.value);
-          setSemester("");
-          setSubject("");
-        }}>
+        {/* YEAR */}
+        <select
+          value={year}
+          onChange={(e) => {
+            setYear(e.target.value);
+            setSemester("");
+            setSubject("");
+          }}
+        >
           <option value="">Select Year</option>
           <option value="1">1st Year</option>
           <option value="2">2nd Year</option>
           <option value="3">3rd Year</option>
         </select>
 
-        <select value={semester} onChange={e => setSemester(e.target.value)}>
+        {/* SEM */}
+        <select
+          value={semester}
+          onChange={(e) => {
+            setSemester(e.target.value);
+            setSubject("");
+          }}
+        >
           <option value="">All Semesters</option>
-          {[1, 2, 3, 4, 5, 6].map(s => (
-            <option key={s} value={s}>Sem {s}</option>
+          {[1, 2, 3, 4, 5, 6].map((s) => (
+            <option key={s} value={s}>
+              Sem {s}
+            </option>
           ))}
         </select>
 
-        <select value={arrear} onChange={e => setArrear(e.target.value)}>
+        {/* ARREAR */}
+        <select value={arrear} onChange={(e) => setArrear(e.target.value)}>
           <option value="">All</option>
           <option value="0">Without Arrear</option>
           <option value="1">1 Arrear</option>
@@ -171,33 +413,41 @@ export default function StudentsHome() {
           <option value="3">3+ Arrears</option>
         </select>
 
-        <select value={subject} onChange={e => setSubject(e.target.value)}>
+        {/* SUBJECT */}
+        <select value={subject} onChange={(e) => setSubject(e.target.value)}>
           <option value="">All Subjects</option>
-          {subjects.map((s, i) => (
-            <option key={i} value={s.subject_title}>
+          {subjects.map((s) => (
+            <option key={s.subject_title} value={s.subject_title}>
               {s.subject_title}
             </option>
           ))}
         </select>
 
-        <select value={nameSort} onChange={e => {
-          setNameSort(e.target.value);
-          setRegnoSort("");
-        }}>
+        {/* NAME SORT */}
+        <select
+          value={nameSort}
+          onChange={(e) => {
+            setNameSort(e.target.value);
+            setRegnoSort("");
+          }}
+        >
           <option value="">Name Sort</option>
           <option value="az">A → Z</option>
           <option value="za">Z → A</option>
         </select>
 
-        <select value={regnoSort} onChange={e => {
-          setRegnoSort(e.target.value);
-          setNameSort("");
-        }}>
+        {/* REGNO SORT */}
+        <select
+          value={regnoSort}
+          onChange={(e) => {
+            setRegnoSort(e.target.value);
+            setNameSort("");
+          }}
+        >
           <option value="">Reg No Sort</option>
           <option value="asc">Ascending</option>
           <option value="desc">Descending</option>
         </select>
-
       </div>
 
       {/* TABLE */}
@@ -216,76 +466,64 @@ export default function StudentsHome() {
             </tr>
           </thead>
 
-
           <tbody>
             {finalStudents.map((s, index) => (
-              <tr key={s.regno}>
 
-                {/* S.NO */}
+              <tr key={s.regno}>
                 <td>{index + 1}</td>
 
-                {/* ✅ PROFILE IMAGE */}
                 <td>
                   <img
                     src={
-                      s.photo && s.photo.trim() !== ""
-                        ? `http://localhost:5000/uploads/${s.photo}?v=${s.regno}`
-                        : "/default-avatar.png"
+                      supabase.storage
+                        .from("student-photos")
+                        .getPublicUrl(`${s.regno}.jpg`).data.publicUrl
                     }
-                    className={
-                      subject
-                        ? s.position === 1
-                          ? "profile-img topper-img"
-                          : "profile-img"
-                        : s.rank === 1
-                          ? "profile-img topper-img"
-                          : "profile-img"
-                    }
+                    className="profile-img"
                     alt={s.name}
-                    onError={e => {
+                    onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "/default-avatar.png";
+
+                      // Try png if jpg not found
+                      e.target.src = supabase.storage
+                        .from("student-photos")
+                        .getPublicUrl(`${s.regno}.png`).data.publicUrl;
+
+                      // If png also fails → default
+                      e.target.onerror = () => {
+                        e.target.src = "/default.png";
+                      };
                     }}
                   />
+
+
+
+
                 </td>
 
-                {/* REG NO */}
-                <td className={subject ? (s.position === 1 ? "topper-text" : "") : (s.rank === 1 ? "topper-text" : "")}>
-                  {s.regno}
-                </td>
 
-                {/* NAME */}
-                <td className={subject ? (s.position === 1 ? "topper-text" : "") : (s.rank === 1 ? "topper-text" : "")}>
-                  {s.name}
-                </td>
-
-                {/* YEAR */}
+                <td>{s.regno}</td>
+                <td>{s.name}</td>
                 <td>{s.year}</td>
 
-                {/* POSITION / ARREARS */}
-                <td className={subject ? "position" : s.arrears > 0 ? "arrear" : "clear"}>
-                  {subject ? s.position : s.arrears}
+                <td>{subject ? s.position : s.arrears}</td>
+
+                <td>
+                  {subject
+                    ? s.marks === null
+                      ? "-"
+                      : s.marks
+                    : boardMembers.get(s.regno) || "-"}
                 </td>
 
-                {/* MARKS / BOARD */}
-                <td>
-                  {subject ? s.marks : getBoardRole(Number(s.year), s.rank)}
-                </td>
-
-                {/* GPA / CGPA */}
-                <td>
-                  {subject ? s.gpa : s.cgpa}
-                </td>
+                <td>{subject ? s.gpa : s.cgpa}</td>
 
               </tr>
             ))}
           </tbody>
-
         </table>
 
-        {finalStudents.length === 0 && (
-          <p className="no-data">No students found</p>
-        )}
+        {finalStudents.length === 0 && <p className="no-data">No students found</p>}
       </div>
     </div>
   );

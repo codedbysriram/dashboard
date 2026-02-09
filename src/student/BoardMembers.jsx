@@ -1,161 +1,225 @@
 import React, { useEffect, useState } from "react";
 import "../styles/BoardMembers.css";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../supabaseClient";
 
+/* ===== GROUP STUDENT ROWS + CALCULATE CGPA ===== */
+const groupStudentRows = (rows) => {
+  const map = new Map();
 
+  rows.forEach((r) => {
+    if (!r.regno) return;
 
+    if (!map.has(r.regno)) {
+      map.set(r.regno, {
+        regno: r.regno,
+        name: r.name || "",
+        year: r.year || "",
+        photo: r.photo || "",
+        subjects: [],
+        cgpa: 0,
+      });
+    }
+
+    const student = map.get(r.regno);
+
+    const marks = r.total ? Number(r.total) : null;
+    const status = (r.result || "").toUpperCase();
+    const isArrear = status === "RA" || status === "AA";
+
+    let gpa = null;
+
+    if (marks !== null) {
+      gpa = isArrear ? 0 : Number((marks / 10).toFixed(1));
+    }
+
+    student.subjects.push({
+      semester: r.semester,
+      subject_code: r.subject_code,
+      subject_title: r.subject_title,
+      ia: r.ia,
+      ea: r.ea,
+      total: marks,
+      result: r.result,
+      gpa: gpa,
+    });
+  });
+
+  const result = Array.from(map.values());
+
+  // 🔥 CGPA CALCULATION
+  result.forEach((student) => {
+    const validGpas = student.subjects
+      .map((s) => s.gpa)
+      .filter((g) => g !== null);
+
+    if (validGpas.length > 0) {
+      const avg =
+        validGpas.reduce((a, b) => a + b, 0) / validGpas.length;
+
+      student.cgpa = avg.toFixed(2);
+    } else {
+      student.cgpa = "0.00";
+    }
+  });
+
+  return result;
+};
+
+/* ===== ASSIGN BOARD ROLES BY CGPA ===== */
+const assignBoardMembersByCgpa = (students) => {
+  const yearGroups = {
+    1: [],
+    2: [],
+    3: []
+  };
+
+  students.forEach((s) => {
+    if (s.year && yearGroups[s.year]) {
+      yearGroups[s.year].push(s);
+    }
+  });
+
+  Object.keys(yearGroups).forEach((year) => {
+    yearGroups[year].sort((a, b) => Number(b.cgpa) - Number(a.cgpa));
+  });
+
+  const boardList = [];
+
+  if (yearGroups[1]?.length) {
+    boardList.push({
+      ...yearGroups[1][0],
+      role: "Treasurer",
+    });
+  }
+
+  if (yearGroups[2]?.length) {
+    boardList.push({
+      ...yearGroups[2][0],
+      role: "Secretary",
+    });
+
+    if (yearGroups[2][1]) {
+      boardList.push({
+        ...yearGroups[2][1],
+        role: "Joint Secretary",
+      });
+    }
+  }
+
+  if (yearGroups[3]?.length) {
+    boardList.push({
+      ...yearGroups[3][0],
+      role: "Chairman",
+    });
+
+    if (yearGroups[3][1]) {
+      boardList.push({
+        ...yearGroups[3][1],
+        role: "Vice Chairman",
+      });
+    }
+  }
+
+  return boardList;
+};
 
 export default function BoardMembers() {
+  const navigate = useNavigate();
+
   const [members, setMembers] = useState([]);
-
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [subjects, setSubjects] = useState([]);
 
-  const formatRank = r => {
-    if (r === 1) return "1st";
-    if (r === 2) return "2nd";
-    if (r === 3) return "3rd";
-    return `${r}th`;
+  const getPhotoUrl = (regno) => {
+    return supabase.storage
+      .from("student-photos")
+      .getPublicUrl(`${regno}.jpg`).data.publicUrl;
   };
 
 
-  const openStudentPopup = student => {
+  const openStudentPopup = (student) => {
     setSelectedStudent(student);
-
-    fetch(`http://localhost:5000/api/results/${student.regno}`)
-      .then(res => res.json())
-      .then(data => setSubjects(Array.isArray(data) ? data : []))
-      .catch(err => {
-        console.error("Subject fetch failed:", err);
-        setSubjects([]);
-      });
   };
 
   const closePopup = () => {
     setSelectedStudent(null);
-    setSubjects([]);
   };
+
   useEffect(() => {
-    fetch("http://localhost:5000/api/results")
-      .then(res => res.json())
-      .then(data => {
-        if (!Array.isArray(data)) return;
+    const loadBoardMembers = async () => {
+      const { data, error } = await supabase
+        .from("student_results")
+        .select("*");
 
-        // 1️⃣ Group by year
-        const grouped = data.reduce((acc, s) => {
-          acc[s.year] = acc[s.year] || [];
-          acc[s.year].push(s);
-          return acc;
-        }, {});
+      if (error) {
+        console.error("Board fetch error:", error);
+        return;
+      }
 
-        // 2️⃣ Rank year-wise by CGPA
-        const ranked = [];
+      const grouped = groupStudentRows(data || []);
 
-        Object.values(grouped).forEach(group => {
-          const sorted = [...group].sort((a, b) => {
-            if (b.cgpa !== a.cgpa) return b.cgpa - a.cgpa;
-            return a.regno.localeCompare(b.regno); // tie-break
-          });
+      const board = assignBoardMembersByCgpa(grouped);
 
-          sorted.forEach((s, i) => {
-            ranked.push({ ...s, rank: i + 1 });
-          });
-        });
+      setMembers(board);
+    };
 
-        // 3️⃣ Pick only board members
-        const board = ranked.filter(s => {
-          if (s.year === 1 && s.rank === 1) return true;
-          if (s.year === 2 && (s.rank === 1 || s.rank === 2)) return true;
-          if (s.year === 3 && (s.rank === 1 || s.rank === 2)) return true;
-          return false;
-        });
-
-        setMembers(board);
-      });
+    loadBoardMembers();
   }, []);
-
-
-  const getRole = (year, rank) => {
-    if (year === 1 && rank === 1) return "Treasurer";
-    if (year === 2 && rank === 1) return "Secretary";
-    if (year === 2 && rank === 2) return "Joint Secretary";
-    if (year === 3 && rank === 1) return "Chairman";
-    if (year === 3 && rank === 2) return "Vice Chairman";
-    return "";
-  };
 
   return (
     <div className="board-container">
       <button className="back-bn" onClick={() => navigate("/")}>
         ← Back to Dashboard
       </button>
+
       <h2>Student Board Members</h2>
 
       <div className="board-grid">
-        {members.map(m => (
+        {members.map((m) => (
           <div
             key={m.regno}
             className="board-card"
             onClick={() => openStudentPopup(m)}
-            style={{ cursor: "pointer" }}
           >
             <img
-              src={
-                m.photo
-                  ? `http://localhost:5000/uploads/${m.photo}`
-                  : "/default-avatar.png"
-              }
+              src={getPhotoUrl(m.regno)}
               alt={m.name}
+              onError={(e) => {
+                e.target.onerror = null;
+
+                // Try PNG if JPG not found
+                e.target.src = supabase.storage
+                  .from("student-photos")
+                  .getPublicUrl(`${m.regno}.png`).data.publicUrl;
+
+                // If both fail → default image
+                e.target.onerror = () => {
+                  e.target.src = "/default-avatar.png";
+                };
+              }}
             />
+
+
             <h4>{m.name}</h4>
             <p>{m.regno}</p>
-            <span className="role">{getRole(Number(m.year), m.rank)}</span>
+
+            <span className="role">{m.role}</span>
+
+            <span className="cgpa">CGPA: {m.cgpa}</span>
           </div>
         ))}
       </div>
-      {/* ===== STUDENT DETAILS POPUP ===== */}
+
       {selectedStudent && (
         <div className="popup-overlay" onClick={closePopup}>
-          <div className="popup-card" onClick={e => e.stopPropagation()}>
+          <div className="popup-card" onClick={(e) => e.stopPropagation()}>
+            <button className="close-btn" onClick={closePopup}>
+              ✖
+            </button>
 
-            <button className="close-btn" onClick={closePopup}>✖</button>
+            <h2>{selectedStudent.name}</h2>
+            <h4>CGPA: {selectedStudent.cgpa}</h4>
 
-            {/* ===== POPUP HEADER ===== */}
-            <div className="popup-header">
-              <div className="profile-section">
-                <img
-                  src={
-                    selectedStudent.photo
-                      ? `http://localhost:5000/uploads/${selectedStudent.photo}`
-                      : "/default-avatar.png"
-                  }
-                  alt={selectedStudent.name}
-                  className="profile-pic"
-                />
-
-                <div className="profile-info">
-                  <h2>{selectedStudent.name}</h2>
-                  <p>Reg No: {selectedStudent.regno}</p>
-                  <p>Year: {selectedStudent.year}</p>
-                  <p className="role-text">
-                    {getRole(Number(selectedStudent.year), selectedStudent.rank)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="academic-summary">
-                <div className="summary-box">
-                  <span>CGPA</span>
-                  <strong>{selectedStudent.cgpa}</strong>
-                </div>
-
-                <div className="summary-box">
-                  <span>Position</span>
-                  <strong>{selectedStudent.rank}</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* ===== MARKS TABLE ===== */}
             <table>
               <thead>
                 <tr>
@@ -170,27 +234,26 @@ export default function BoardMembers() {
               </thead>
 
               <tbody>
-                {subjects.map(s => (
-                  <tr key={s.id}>
+                {selectedStudent.subjects.map((s, i) => (
+                  <tr key={i}>
                     <td>{s.semester}</td>
                     <td>{s.subject_code}</td>
                     <td>{s.subject_title}</td>
                     <td>{s.ia}</td>
                     <td>{s.ea}</td>
                     <td>{s.total}</td>
-                    <td className={s.result === "PASS" ? "pass" : "fail"}>
-                      {s.result}
-                    </td>
+                    <td>{s.result}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            {subjects.length === 0 && <p>No marks found</p>}
+            {selectedStudent.subjects.length === 0 && (
+              <p>No marks found</p>
+            )}
           </div>
         </div>
       )}
-
     </div>
   );
 }
